@@ -9,7 +9,9 @@ module.exports = {
       width: Sequelize.SMALLINT.UNSIGNED,
       height: Sequelize.SMALLINT.UNSIGNED,
       duration: Sequelize.SMALLINT.UNSIGNED,
-      size: Sequelize.BIGINT.UNSIGNED
+      size: Sequelize.BIGINT.UNSIGNED,
+      createdAt: Sequelize.DATE(3),
+      updatedAt: Sequelize.DATE(3),
     })
   },
 
