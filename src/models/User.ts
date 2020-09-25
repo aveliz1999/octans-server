@@ -1,29 +1,17 @@
 import {Table, Column, Model, PrimaryKey, CreatedAt, UpdatedAt} from 'sequelize-typescript';
 
 @Table
-export default class Media extends Model<Media> {
+export default class User extends Model<User> {
 
     @PrimaryKey
     @Column
     id: number;
 
     @Column
-    hash: string;
+    username: string;
 
     @Column
-    mediaType: string;
-
-    @Column
-    width: number;
-
-    @Column
-    height: number;
-
-    @Column
-    duration: number;
-
-    @Column
-    size: number;
+    password: string;
 
     @CreatedAt
     @Column
