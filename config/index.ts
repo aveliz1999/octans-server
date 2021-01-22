@@ -1,4 +1,5 @@
 import databaseConfig from './database.json';
+import passwordConfig from './passwords.json';
 
 import {Dialect} from "sequelize";
 
@@ -11,3 +12,8 @@ type DatabaseConfig = {
     "dialect": Dialect
 }
 export const database: DatabaseConfig = databaseConfig as DatabaseConfig;
+
+type PasswordConfig = {
+    saltRounds: number
+}
+export const passwords: PasswordConfig = passwordConfig as PasswordConfig;
