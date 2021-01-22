@@ -3,7 +3,12 @@
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.createTable('Media', {
-      id: Sequelize.INTEGER.UNSIGNED,
+      id: {
+        allowNull: false,
+        autoIncrement: true,
+        primaryKey: true,
+        type: Sequelize.INTEGER.UNSIGNED
+      },
       hash: Sequelize.CHAR(64),
       mediaType: Sequelize.STRING,
       width: Sequelize.SMALLINT.UNSIGNED,
