@@ -1,8 +1,10 @@
-import {Table, Column, Model, PrimaryKey, CreatedAt, UpdatedAt} from 'sequelize-typescript';
+import {Table, Column, Model, PrimaryKey, CreatedAt, UpdatedAt, ForeignKey} from 'sequelize-typescript';
+import TagMediaMapping from "./TagMediaMapping";
 
 @Table
 export default class Media extends Model<Media> {
 
+    @ForeignKey(() => TagMediaMapping)
     @PrimaryKey
     @Column
     id: number;
@@ -27,9 +29,9 @@ export default class Media extends Model<Media> {
 
     @CreatedAt
     @Column
-    createdAt: string;
+    createdAt: Date;
 
     @UpdatedAt
     @Column
-    updatedAt: string;
+    updatedAt: Date;
 }
