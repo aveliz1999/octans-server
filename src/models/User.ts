@@ -1,5 +1,10 @@
-import {Table, Column, Model, PrimaryKey, CreatedAt, UpdatedAt} from 'sequelize-typescript';
+import {Table, Column, Model, PrimaryKey, CreatedAt, UpdatedAt, DefaultScope} from 'sequelize-typescript';
 
+@DefaultScope(() => ({
+    attributes: {
+        exclude: ['password']
+    }
+}))
 @Table
 export default class User extends Model<User> {
 
@@ -15,9 +20,16 @@ export default class User extends Model<User> {
 
     @CreatedAt
     @Column
-    createdAt: string;
+    createdAt: Date;
 
     @UpdatedAt
     @Column
-    updatedAt: string;
+    updatedAt: Date;
+}
+
+User.prototype.toJSON = function (): object {
+    const values = Object.assign({}, this.get());
+
+    delete values.password;
+    return values;
 }
