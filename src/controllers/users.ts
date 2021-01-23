@@ -4,6 +4,12 @@ import Joi, {ValidationError} from 'joi';
 import bcrypt from 'bcrypt';
 import {passwords as passwordsConfig} from '../../config/index';
 
+declare module 'express-session' {
+    interface SessionData {
+        user: number
+    }
+}
+
 export const createUser = async function (req: Request, res: Response) {
     const schema = Joi.object({
         username: Joi.string()
@@ -44,6 +50,15 @@ export const createUser = async function (req: Request, res: Response) {
 }
 
 export const login = async function (req: Request, res: Response) {
+    if (req.session.user) {
+        const user = await User.findOne({
+            where: {
+                id: req.session.user
+            }
+        });
+        return res.status(200).send(user);
+    }
+
     const schema = Joi.object({
         username: Joi.string()
             .min(1)
@@ -73,6 +88,7 @@ export const login = async function (req: Request, res: Response) {
             return res.status(401).send({message: 'Invalid username or password.'})
         }
 
+        req.session.user = user.id;
         return res.status(200).send(user);
     } catch (err) {
         if (err.isJoi) {

@@ -11,12 +11,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/connect-redis": "0.0.16",
+    "@types/express-session": "^1.17.3",
     "@types/joi": "^17.2.3",
+    "@types/redis": "^2.8.28",
     "bcrypt": "^5.0.0",
+    "connect-redis": "^5.0.0",
     "cookie-parser": "^1.4.5",
     "express": "^4.17.1",
+    "express-session": "^1.17.1",
     "joi": "^17.3.0",
     "mysql2": "^2.2.5",
+    "redis": "^3.0.2",
     "reflect-metadata": "^0.1.13",
     "sequelize": "^5.1.0",
     "sequelize-typescript": "^1.1.0"
