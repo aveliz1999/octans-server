@@ -36,8 +36,9 @@ app.use(express.urlencoded({extended: true}));
 app.use(cookieParser());
 
 import usersRoute from './routes/users';
+import tagsRoute from './routes/tags';
 
 app.use('/users', usersRoute);
-
+app.use('/tags', tagsRoute);
 
 export default app;
