@@ -1,5 +1,6 @@
 import {Request, Response} from "express";
 import Tag from '../models/Tag';
+import {Op} from 'sequelize';
 import Joi, {ValidationError} from 'joi';
 
 export const getTagById = async function (req: Request, res: Response) {
@@ -50,6 +51,75 @@ export const getTagByName = async function (req: Request, res: Response) {
         }
 
         return res.status(200).send(tag);
+    }
+    catch(err) {
+        if (err.isJoi) {
+            return res.status(400).send({message: (err as ValidationError).message});
+        }
+        return res.status(500).send({message: 'An error has occurred on the server.'})
+    }
+}
+
+export const search = async function (req: Request, res: Response) {
+    const postSchema = Joi.object({
+        tagName: Joi.string()
+            .regex(/[a-zA-Z0-9 -_]+/)
+            .max(128)
+            .min(1)
+            .required()
+    });
+
+    const schema = Joi.object({
+        namespace: Joi.string()
+            .alphanum()
+            .max(64)
+            .allow('')
+            .optional(),
+        tagName: Joi.string()
+            .regex(/[a-zA-Z0-9 -_]+/)
+            .max(64)
+            .min(1)
+            .required()
+    });
+
+    try {
+        const {tagName: preTagName} = await postSchema.validateAsync(req.body);
+
+        const namespace = preTagName.includes(':') ? preTagName.split(':')[0] : null;
+        const tagName = preTagName.includes(':') ? preTagName.split(':')[1] : preTagName;
+
+        let tags;
+        if(namespace) {
+            tags = await Tag.findAll({
+                where: {
+                    namespace,
+                    tagName: {
+                        [Op.like]: `%${tagName}%`
+                    }
+                },
+                limit: 10
+            });
+        }
+        else {
+            tags = await Tag.findAll({
+                where: {
+                    [Op.or]: [
+                        {
+                            tagName: {
+                                [Op.like]: `%${tagName}%`
+                            }
+                        },
+                        {
+                            namespace: {
+                                [Op.like]: `%${tagName}%`
+                            }
+                        }
+                    ]
+                }
+            })
+        }
+
+        return res.status(200).send(tags);
     }
     catch(err) {
         if (err.isJoi) {
