@@ -2,6 +2,7 @@ import databaseConfig from './database.json';
 import passwordConfig from './passwords.json';
 import sessionConfig from './session.json';
 import redisConfig from './redis.json';
+import filesConfig from './files.json';
 import {Dialect} from "sequelize";
 
 
@@ -31,3 +32,8 @@ type RedisConfig = {
     db?: string | number
 }
 export const redis: RedisConfig = redisConfig;
+
+type FilesConfig = {
+    fileDirectory: string
+}
+export const files: FilesConfig = filesConfig;
