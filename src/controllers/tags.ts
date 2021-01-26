@@ -66,7 +66,10 @@ export const search = async function (req: Request, res: Response) {
             .regex(/[a-zA-Z0-9 -_]+/)
             .max(128)
             .min(1)
-            .required()
+            .required(),
+        exclude: Joi.array()
+            .has(Joi.number().integer().positive())
+            .optional()
     });
 
     const schema = Joi.object({
@@ -83,7 +86,9 @@ export const search = async function (req: Request, res: Response) {
     });
 
     try {
-        const {tagName: preTagName} = await postSchema.validateAsync(req.body);
+        const postInfo: {tagName: string, exclude?: number[]} = await postSchema.validateAsync(req.body);
+        const {tagName: preTagName} = postInfo;
+        const exclude = postInfo.exclude ? postInfo.exclude : [];
 
         const namespace = preTagName.includes(':') ? preTagName.split(':')[0] : null;
         const tagName = preTagName.includes(':') ? preTagName.split(':')[1] : preTagName;
@@ -95,6 +100,9 @@ export const search = async function (req: Request, res: Response) {
                     namespace,
                     tagName: {
                         [Op.like]: `%${tagName}%`
+                    },
+                    id: {
+                        [Op.notIn]: exclude
                     }
                 },
                 limit: 10
@@ -114,7 +122,10 @@ export const search = async function (req: Request, res: Response) {
                                 [Op.like]: `%${tagName}%`
                             }
                         }
-                    ]
+                    ],
+                    id: {
+                        [Op.notIn]: exclude
+                    }
                 }
             })
         }
@@ -125,6 +136,7 @@ export const search = async function (req: Request, res: Response) {
         if (err.isJoi) {
             return res.status(400).send({message: (err as ValidationError).message});
         }
+        console.error(err);
         return res.status(500).send({message: 'An error has occurred on the server.'})
     }
 }
