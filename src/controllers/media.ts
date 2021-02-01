@@ -5,8 +5,14 @@ import crypto from "crypto";
 import {files} from "../../config";
 import Media from "../models/Media";
 import ffmpeg from 'fluent-ffmpeg';
+import {Request, Response} from "express";
+import Joi, {ValidationError} from 'joi';
+import Tag from "../models/Tag";
+import sequelize, {Op} from 'sequelize';
+import TagMediaMapping from "../models/TagMediaMapping";
+
 const imageTypes = ['image/jpeg', 'image/png', 'image/gif'];
-const videoTypes = ['video/x-matroska'];
+const videoTypes = ['video/x-matroska', 'video/mp4'];
 const allowedMimeTypes = imageTypes.concat(videoTypes);
 
 fs.access(files.fileDirectory, fs.constants.W_OK, function(err) {
@@ -57,6 +63,7 @@ export const uploadMedia = async function(req, res) {
         }
     }
     catch(err) {
+        console.error(err);
         return res.status(500).send({message: 'An error has occurred on the server.'})
     }
 
@@ -96,4 +103,43 @@ export const uploadMedia = async function(req, res) {
 
     })
     readStream.pipe(hash);
+}
+
+export const list = async function (req: Request, res: Response) {
+    const schema = Joi.object({
+        tags: Joi.array()
+            .has(Joi.number().positive().integer()),
+        after: Joi.number()
+            .min(0)
+            .integer()
+    });
+
+    try {
+        const {tags: tagIds, after}: {tags: number[], after: number} = await schema.validateAsync(req.body);
+        const asd = tagIds.map((i: number) => {
+            return {tagId: i};
+        })
+
+        const mapping = await TagMediaMapping.findAll({
+            where: {
+                [Op.or]: asd,
+                mediaId: {
+                    [Op.gt]: after
+                }
+            },
+            group: ['mediaId'],
+            having: sequelize.where(sequelize.fn('COUNT', '*'),
+                sequelize.literal(`${tagIds.length}`)
+            )
+        });
+
+        return res.status(200).send(mapping.map(m => m.media));
+    }
+    catch(err) {
+        if (err.isJoi) {
+            return res.status(400).send({message: (err as ValidationError).message});
+        }
+        console.error(err);
+        return res.status(500).send({message: 'An error has occurred on the server.'})
+    }
 }
