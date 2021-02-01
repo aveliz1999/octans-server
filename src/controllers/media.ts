@@ -10,6 +10,7 @@ import Joi, {ValidationError} from 'joi';
 import Tag from "../models/Tag";
 import sequelize, {Op} from 'sequelize';
 import TagMediaMapping from "../models/TagMediaMapping";
+import sharp from "sharp";
 
 const imageTypes = ['image/jpeg', 'image/png', 'image/gif'];
 const videoTypes = ['video/x-matroska', 'video/mp4'];
@@ -92,14 +93,20 @@ export const uploadMedia = async function(req, res) {
             return res.status(500).send({message: 'An error has occurred on the server.'});
         }
 
-        console.log(`${files.fileDirectory}/storage/${hashCode}`)
-        ffmpeg(`${files.fileDirectory}/storage/${hashCode}`)
-            .screenshots({
-                folder: `${files.fileDirectory}/storage`,
-                filename: `${hashCode}.thumbnail.png`,
-                timestamps: ['50%'],
-                size: '192x192'
-            });
+        if(duration) {
+            ffmpeg(`${files.fileDirectory}/storage/${hashCode}`)
+                .screenshots({
+                    folder: `${files.fileDirectory}/storage`,
+                    filename: `${hashCode}.thumbnail.png`,
+                    timestamps: ['50%'],
+                    size: '192x192'
+                });
+        }
+        else {
+            sharp(`${files.fileDirectory}/storage/${hashCode}`)
+                .resize(192, 192)
+                .toFile(`${files.fileDirectory}/storage/${hashCode}.thumbnail.png`)
+        }
 
     })
     readStream.pipe(hash);
