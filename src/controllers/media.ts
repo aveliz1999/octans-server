@@ -108,7 +108,8 @@ export const uploadMedia = async function(req, res) {
 export const list = async function (req: Request, res: Response) {
     const schema = Joi.object({
         tags: Joi.array()
-            .has(Joi.number().positive().integer()),
+            .items(Joi.number().positive().integer())
+            .min(0),
         after: Joi.number()
             .min(0)
             .integer()
@@ -116,24 +117,49 @@ export const list = async function (req: Request, res: Response) {
 
     try {
         const {tags: tagIds, after}: {tags: number[], after: number} = await schema.validateAsync(req.body);
-        const asd = tagIds.map((i: number) => {
-            return {tagId: i};
-        })
+        if(tagIds.length) {
+            const mappedTagIds = tagIds.map((i: number) => {
+                return {tagId: i};
+            })
 
-        const mapping = await TagMediaMapping.findAll({
+            const mapping = await TagMediaMapping.findAll({
+                where: {
+                    [Op.or]: mappedTagIds,
+                    mediaId: {
+                        [Op.gt]: after
+                    }
+                },
+                group: ['mediaId'],
+                having: sequelize.where(sequelize.fn('COUNT', '*'),
+                    sequelize.literal(`${tagIds.length}`)
+                ),
+                limit: 101
+            });
+
+            const result = {
+                media: mapping.slice(0, 100).map(m => m.media),
+                hasNext: mapping.length === 101
+            }
+
+            return res.status(200).send(result);
+        }
+
+        const media = await Media.findAll({
             where: {
-                [Op.or]: asd,
-                mediaId: {
+                id: {
                     [Op.gt]: after
                 }
             },
-            group: ['mediaId'],
-            having: sequelize.where(sequelize.fn('COUNT', '*'),
-                sequelize.literal(`${tagIds.length}`)
-            )
+            limit: 101
         });
 
-        return res.status(200).send(mapping.map(m => m.media));
+        const result = {
+            media: media.slice(0, 100),
+            hasNext: media.length === 101
+        }
+
+        return res.status(200).send(result);
+
     }
     catch(err) {
         if (err.isJoi) {
