@@ -12,10 +12,6 @@ import sequelize, {Op} from 'sequelize';
 import TagMediaMapping from "../models/TagMediaMapping";
 import sharp from "sharp";
 
-const imageTypes = ['image/jpeg', 'image/png', 'image/gif'];
-const videoTypes = ['video/x-matroska', 'video/mp4'];
-const allowedMimeTypes = imageTypes.concat(videoTypes);
-
 fs.access(files.fileDirectory, fs.constants.W_OK, function(err) {
     if(err) {
         console.error(err);
@@ -36,14 +32,14 @@ fs.mkdir(`${files.fileDirectory}/storage`, (err)=>{
 });
 
 export const uploadMedia = async function(req, res) {
-    if(!allowedMimeTypes.includes(req.file.mimetype)) {
+    if(!(req.file.mimetype.startsWith('video/') || req.file.mimetype.startsWith('image/'))) {
         console.log(req.file.mimetype);
         fs.unlink(req.file.path, (err) => {
             if(err) {
                 console.error(err);
             }
         });
-        return res.status(400).send({message: `File can only be one of the following types: ${JSON.stringify(allowedMimeTypes)}`})
+        return res.status(400).send({message: 'File can only be an image of video type'})
     }
 
     let width = 0;
@@ -51,7 +47,7 @@ export const uploadMedia = async function(req, res) {
     let duration = 0;
 
     try {
-        if(imageTypes.includes(req.file.mimetype)) {
+        if(req.file.mimetype.startsWith('image/')) {
             const dimensions = imageSize(req.file.path);
             width = dimensions.width;
             height = dimensions.height;
