@@ -2,7 +2,7 @@ import fs from "fs";
 import {imageSize} from "image-size";
 import {promisify} from "util";
 import crypto from "crypto";
-import {files} from "../../config";
+import {files as filesConfig, files} from "../../config";
 import Media from "../models/Media";
 import ffmpeg from 'fluent-ffmpeg';
 import {Request, Response} from "express";
@@ -167,6 +167,92 @@ export const list = async function (req: Request, res: Response) {
     catch(err) {
         if (err.isJoi) {
             return res.status(400).send({message: (err as ValidationError).message});
+        }
+        console.error(err);
+        return res.status(500).send({message: 'An error has occurred on the server.'})
+    }
+}
+
+export const download = async function (req: Request, res: Response) {
+    const schema = Joi.object({
+        hash: Joi.string()
+            .hex()
+            .min(5)
+            .max(40)
+            .required(),
+        thumbnail: Joi.boolean()
+            .optional(),
+        '0': Joi.string()
+            .allow('mp4', 'png')
+            .required()
+    });
+
+    try {
+        const {hash, thumbnail}: {hash: string, thumbnail: boolean | undefined} = await schema.validateAsync(req.params);
+        const path = `${filesConfig.fileDirectory}/storage/${hash}${thumbnail ? '.thumbnail.png' : ''}`;
+        const stat = await fs.promises.stat(path);
+
+        if(thumbnail) {
+            return res.status(200).sendFile(path);
+        }
+
+        const media = await Media.findOne({
+            where: {
+                hash
+            }
+        });
+        if(!media) {
+            return res.status(404).send({message: 'No media found with that hash'});
+        }
+
+        if(media.mediaType.startsWith('video')) {
+            const rangeHeader = req.headers.range;
+            if(!rangeHeader) {
+                return res.status(200).sendFile(path);
+            }
+
+            let range;
+            if(!rangeHeader.startsWith('bytes=')) {
+                range = [0, 65536];
+            }
+            else {
+                range = rangeHeader.substring(6).split('-').map(x => parseInt(x));
+            }
+
+            const start = range[0];
+            const total = stat.size;
+            let end = range[1] ? parseInt(range[1], 10) : total - 1;
+            let chunksize = (end - start) + 1;
+
+            const maxChunk = 1024 * 1024;
+            if(chunksize > maxChunk) {
+                end = start + maxChunk - 1;
+                chunksize = (end - start) + 1;
+            }
+
+            res.writeHead(206, {
+                "Content-Range": "bytes " + start + "-" + end + "/" + total,
+                "Accept-Ranges": "bytes",
+                "Content-Length": chunksize,
+                "Content-Type": "video/mp4"
+            })
+            return fs.createReadStream(path, {
+                start: start,
+                end: end
+            }).pipe(res);
+        }
+        else if(media.mediaType.startsWith('image')) {
+            return res.status(200).sendFile(path);
+        }
+
+        return res.status(400).send({message: 'Invalid media type.'});
+    }
+    catch(err) {
+        if (err.isJoi) {
+            return res.status(400).send({message: (err as ValidationError).message});
+        }
+        else if(err.code === 'ENOENT') {
+            return res.status(404).send({message: 'No media found with that hash'});
         }
         console.error(err);
         return res.status(500).send({message: 'An error has occurred on the server.'})
