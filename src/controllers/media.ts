@@ -258,3 +258,33 @@ export const download = async function (req: Request, res: Response) {
         return res.status(500).send({message: 'An error has occurred on the server.'})
     }
 }
+
+export const listTags = async function (req: Request, res: Response) {
+    const schema = Joi.object({
+        id: Joi.number()
+            .integer()
+            .positive()
+            .required()
+    });
+
+    try {
+        const {id}: {id: number} = await schema.validateAsync(req.params);
+
+        const mappings = await TagMediaMapping.findAll({
+            where: {
+                mediaId: id
+            }
+        });
+
+        const tags = mappings.map(m => m.tag);
+
+        return res.status(200).send(tags);
+    }
+    catch(err) {
+        if (err.isJoi) {
+            return res.status(400).send({message: (err as ValidationError).message});
+        }
+        console.error(err);
+        return res.status(500).send({message: 'An error has occurred on the server.'})
+    }
+}
