@@ -288,3 +288,107 @@ export const listTags = async function (req: Request, res: Response) {
         return res.status(500).send({message: 'An error has occurred on the server.'})
     }
 }
+
+export const addTag = async function (req: Request, res: Response) {
+    const paramsSchema = Joi.object({
+        id: Joi.number()
+            .integer()
+            .positive()
+            .required()
+    });
+    const bodyShema = Joi.object({
+        tagId: Joi.number()
+            .integer()
+            .positive()
+            .required()
+    });
+
+    try {
+        const {id}: {id: number} = await paramsSchema.validateAsync(req.params);
+        const {tagId}: {tagId: number} = await bodyShema.validateAsync(req.body);
+
+        const media = await Media.findOne({
+            where: {
+                id
+            }
+        });
+        if(!media) {
+            return res.status(404).send({message: 'No media found with that id.'});
+        }
+
+        const tag = await Tag.findOne({
+            where: {
+                id: tagId
+            }
+        });
+        if(!tag) {
+            return res.status(404).send({message: 'No tag found with that id.'});
+        }
+
+        const mapping = await TagMediaMapping.create({
+            tagId,
+            mediaId: id
+        });
+
+        return res.status(201).send(mapping);
+    }
+    catch(err) {
+        if (err.isJoi) {
+            return res.status(400).send({message: (err as ValidationError).message});
+        }
+        console.error(err);
+        return res.status(500).send({message: 'An error has occurred on the server.'})
+    }
+}
+
+export const removeTag = async function (req: Request, res: Response) {
+    const paramsSchema = Joi.object({
+        id: Joi.number()
+            .integer()
+            .positive()
+            .required(),
+        tagId: Joi.number()
+            .integer()
+            .positive()
+            .required()
+    });
+
+    try {
+        const {id, tagId}: {id: number, tagId: number} = await paramsSchema.validateAsync(req.params);
+
+        const media = await Media.findOne({
+            where: {
+                id
+            }
+        });
+        if(!media) {
+            return res.status(404).send({message: 'No media found with that id.'});
+        }
+
+        const tag = await Tag.findOne({
+            where: {
+                id: tagId
+            }
+        });
+        if(!tag) {
+            return res.status(404).send({message: 'No tag found with that id.'});
+        }
+
+        const mappings = await TagMediaMapping.findAll({
+            where: {
+                tagId,
+                mediaId: id
+            }
+        });
+        await Promise.all(mappings.map(m => m.destroy()));
+
+        return res.status(201).send({message: `${mappings.length} tags unmapped`});
+    }
+    catch(err) {
+        if (err.isJoi) {
+            return res.status(400).send({message: (err as ValidationError).message});
+        }
+        console.error(err);
+        return res.status(500).send({message: 'An error has occurred on the server.'})
+    }
+}
