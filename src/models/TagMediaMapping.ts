@@ -29,13 +29,17 @@ export default class TagMediaMapping extends Model {
     @Column
     tagId: number;
 
-    @HasOne(() => Tag)
+    @HasOne(() => Tag, {
+        sourceKey: 'tagId'
+    })
     tag: Tag;
 
     @Column
     mediaId: number;
 
-    @HasOne(() => Media)
+    @HasOne(() => Media, {
+        sourceKey: 'mediaId'
+    })
     media: Media;
 
     @CreatedAt
