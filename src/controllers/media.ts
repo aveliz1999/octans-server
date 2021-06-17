@@ -64,48 +64,55 @@ export const uploadMedia = async function(req, res) {
         return res.status(500).send({message: 'An error has occurred on the server.'})
     }
 
-    const readStream = fs.createReadStream(req.file.path);
-    const hash = crypto.createHash('sha1');
-    hash.setEncoding('hex');
-    readStream.on('end', async function() {
-        hash.end();
-
-        const hashCode = hash.read();
-
-        try {
-            await fs.promises.rename(req.file.path, `${files.fileDirectory}/storage/${hashCode}`);
-
-            const media = await Media.create({
-                hash: hashCode,
-                mediaType: req.file.mimetype,
-                width,
-                height,
-                duration,
-                size: req.file.size
+    let hashCode;
+    try{
+        const readStream = fs.createReadStream(req.file.path);
+        const hash = crypto.createHash('sha1');
+        hash.setEncoding('hex');
+        hashCode = await new Promise(((resolve, reject) => {
+            readStream.on('end', async function() {
+                hash.end();
+                resolve(hash.read());
             });
-            res.status(200).send(media);
-        }
-        catch(err) {
-            return res.status(500).send({message: 'An error has occurred on the server.'});
-        }
+            readStream.on('error', (err =>  reject(err)));
+            readStream.pipe(hash);
+        }));
+    }
+    catch(err) {
+        return res.status(500).send({message: 'An error has occurred on the server.'});
+    }
 
-        if(duration) {
-            ffmpeg(`${files.fileDirectory}/storage/${hashCode}`)
-                .screenshots({
-                    folder: `${files.fileDirectory}/storage`,
-                    filename: `${hashCode}.thumbnail.png`,
-                    timestamps: ['50%'],
-                    size: '192x192'
-                });
-        }
-        else {
-            sharp(`${files.fileDirectory}/storage/${hashCode}`)
-                .resize(192, 192)
-                .toFile(`${files.fileDirectory}/storage/${hashCode}.thumbnail.png`)
-        }
+    try {
+        await fs.promises.rename(req.file.path, `${files.fileDirectory}/storage/${hashCode}`);
 
-    })
-    readStream.pipe(hash);
+        const media = await Media.create({
+            hash: hashCode,
+            mediaType: req.file.mimetype,
+            width,
+            height,
+            duration,
+            size: req.file.size
+        });
+        res.status(200).send(media);
+    }
+    catch(err) {
+        return res.status(500).send({message: 'An error has occurred on the server.'});
+    }
+
+    if(duration) {
+        ffmpeg(`${files.fileDirectory}/storage/${hashCode}`)
+            .screenshots({
+                folder: `${files.fileDirectory}/storage`,
+                filename: `${hashCode}.thumbnail.png`,
+                timestamps: ['50%'],
+                size: '192x192'
+            });
+    }
+    else {
+        sharp(`${files.fileDirectory}/storage/${hashCode}`)
+            .resize(192, 192)
+            .toFile(`${files.fileDirectory}/storage/${hashCode}.thumbnail.png`)
+    }
 }
 
 export const list = async function (req: Request, res: Response) {
